@@ -261,7 +261,7 @@ class DataPrepper:
 
                 try:
                     feature_results[feature['name']].append(feature['value'])
-                except:
+                except KeyError:
                     feature_results[feature['name']].append(0)
 
         frame = pd.DataFrame(feature_results)
