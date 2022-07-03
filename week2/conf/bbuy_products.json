@@ -31,9 +31,9 @@
         },
         "synonym": {
           "type": "synonym",
-          "synonyms_path": "/workspace/datasets/fasttext/synonyms.csv"
+          "synonyms_path": "synonyms.csv"
         }
-      }
+      }       
     }
   },
   "mappings": {
@@ -254,13 +254,14 @@
             "type": "text",
             "analyzer": "smarter_hyphens"
           },
+          "synonyms": {
+            "type": "text",
+            "analyzer": "synonym"
+          },
           "suggest": {
             "type": "completion"
           }
-        },
-        "synonyms": {
-          "type": "text",
-          "analyzer": "synonym"
+
         }
       },
       "onSale": {
