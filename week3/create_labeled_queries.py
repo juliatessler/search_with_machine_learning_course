@@ -54,7 +54,29 @@ df['stemmed'] = df['query'].apply(lambda x: [stemmer.stem(y) for y in x])
 df['query'] = df['stemmed'].apply(' '.join)
 df = df.drop(columns = ['stemmed'])
 
-# IMPLEMENT ME: Roll up categories to ancestors to satisfy the minimum number of queries per category.
+
+### For some 
+count_categories = df['category'].value_counts()
+count_categories_keys = count_categories.index.tolist()
+categories_to_prune = []
+
+# find categories without min queries
+for i in range(0, len(count_categories)):
+    if count_categories[i] < min_queries:
+        categories_to_prune.append(count_categories_keys[i])
+    else:
+        pass
+
+new_category = []
+for index, row in df.iterrows():
+    if df['category'][index] in categories_to_prune:
+        new_category.append(parents_df['parent'].where(parents_df['category'] == df['category'][index])[0])
+    else:
+        new_category.append(df['category'][index])
+
+df['category'] = new_category
+
+print(f"There are {len(df['category'].unique())} categories in the dataset")
 
 # Create labels in fastText format.
 df['label'] = '__label__' + df['category']
