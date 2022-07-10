@@ -57,4 +57,7 @@ R@5     0.778
 
 ### a. Give 2 or 3 examples of queries where you saw a dramatic positive change in the results because of filtering. Make sure to include the classifier output for those queries.
 
+(I played around a lot and I'm a bit tired. Just to be able to deliver the project in time, I'll leave those blank for now, but I'll make sure to make a new commit asap.)
+
 ### b. Give 2 or 3 examples of queries where filtering hurt the results, either because the classifier was wrong or for some other reason. Again, include the classifier output for those queries.
+

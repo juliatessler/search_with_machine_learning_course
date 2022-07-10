@@ -9,13 +9,17 @@ import os
 from getpass import getpass
 from urllib.parse import urljoin
 import pandas as pd
-import fileinput
+import sys
 import logging
+import nltk
+import fasttext
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 logging.basicConfig(format='%(levelname)s:%(message)s')
+
+stemmer = nltk.stem.PorterStemmer()
 
 # expects clicks and impressions to be in the row
 def create_prior_queries_from_group(
@@ -49,7 +53,7 @@ def create_prior_queries(doc_ids, doc_id_weights,
 
 
 # Hardcoded query here.  Better to use search templates or other query config.
-def create_query(user_query, click_prior_query, filters, sort="_score", sortDir="desc", size=10, source=None, synonyms=False):
+def create_query(user_query, click_prior_query, filters, sort="_score", sortDir="desc", size=10, source=None, synonyms=True):
     if synonyms == True:
         name_field = "name.synonyms" 
     else:
@@ -191,11 +195,43 @@ def create_query(user_query, click_prior_query, filters, sort="_score", sortDir=
     return query_obj
 
 
-def search(client, user_query, index="bbuy_products", sort="_score", sortDir="desc"):
-    #### W3: classify the query
+def search(client, user_query, index="bbuy_products", sort="_score", sortDir="desc", synonyms = True, classification_filter = True):
     #### W3: create filters and boosts
+    filters = None
+    if classification_filter == True:
+        #### W3: classify the query
+        model = fasttext.load_model("/workspace/datasets/fasttext/query_classification_10000.bin")
+
+        ## apply same normalization/stemming to query as used for training
+        user_query = user_query.lower()
+        user_query_tokenized = user_query.split()
+        user_query_stemmed = [stemmer.stem(word) for word in user_query_tokenized]
+        user_query_normalized = (' '.join(user_query_stemmed))
+
+        labels, probabilities = model.predict(user_query_normalized, 5)
+        categories = []
+        sum_probabilities = 0.0
+        for label, probability in zip(labels, probabilities):
+            sum_probabilities += probability
+            categories.append(label[9:])
+            if sum_probabilities >= 0.5:
+                break
+        if sum_probabilities < 0.5:
+            categories = None
+
+        print('Predicted categories: ', categories)
+ 
+        if len(categories) > 0:
+            filters = {
+                "terms": {
+                    "categoryPathIds": categories
+                }
+            }
+        else:
+            filters = None
+
     # Note: you may also want to modify the `create_query` method above
-    query_obj = create_query(user_query, click_prior_query=None, filters=None, sort=sort, sortDir=sortDir, source=["name", "shortDescription"])
+    query_obj = create_query(user_query, click_prior_query=None, filters=filters, sort=sort, sortDir=sortDir, source=["name", "shortDescription"], synonyms = synonyms)
     logging.info(query_obj)
     response = client.search(query_obj, index=index)
     if response and response['hits']['hits'] and len(response['hits']['hits']) > 0:
@@ -217,7 +253,8 @@ if __name__ == "__main__":
                          help='The OpenSearch port')
     general.add_argument('--user',
                          help='The OpenSearch admin.  If this is set, the program will prompt for password too. If not set, use default of admin/admin')
-    general.add_argument("--synonyms", default=1, help="Use Synonyms.")
+    general.add_argument("--use_synonyms", action = 'store_true', help="Use Synonyms.")
+    general.add_argument("--use_classification_filter",  action = 'store_true', help="Use category classification filters.")
 
     args = parser.parse_args()
 
@@ -245,13 +282,18 @@ if __name__ == "__main__":
 
     )
     index_name = args.index
+    synonyms_flag = args.use_synonyms
+    classification_filter_flag = args.use_classification_filter
+
     query_prompt = "\nEnter your query (type 'Exit' to exit or hit ctrl-c):"
     print(query_prompt)
-    for line in fileinput.input():
+
+    for line in sys.stdin:
         query = line.rstrip()
         if query == "Exit":
             break
-        search(client=opensearch, user_query=query, index=index_name)
+
+        search(client=opensearch, user_query=query, index=index_name, synonyms = synonyms_flag, classification_filter = classification_filter_flag)
 
         print(query_prompt)
 

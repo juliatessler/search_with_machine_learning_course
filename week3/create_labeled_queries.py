@@ -48,8 +48,8 @@ parents_df = pd.DataFrame(list(zip(categories, parents)), columns =['category', 
 df = pd.read_csv(queries_file_name)[['category', 'query']]
 df = df[df['category'].isin(categories)]
 
-df['query'] = df['query'].str.lower()
-df['query'] = df['query'].str.split()
+f['query'] = df['query'].str.lower()
+df['query'] = ddf['query'].str.split()
 df['stemmed'] = df['query'].apply(lambda x: [stemmer.stem(y) for y in x])
 df['query'] = df['stemmed'].apply(' '.join)
 df = df.drop(columns = ['stemmed'])
